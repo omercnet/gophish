@@ -159,7 +159,7 @@ function attach(files) {
 }
 
 function edit(idx) {
-    $("#modalSubmit").unbind('click').click(function () {
+    $("#modal #modalSubmit").unbind('click').click(function () {
         save(idx)
     })
     $("#attachmentUpload").unbind('click').click(function () {
@@ -223,7 +223,7 @@ function edit(idx) {
 }
 
 function copy(idx) {
-    $("#modalSubmit").unbind('click').click(function () {
+    $("#modal #modalSubmit").unbind('click').click(function () {
         save(-1)
     })
     $("#attachmentUpload").unbind('click').click(function () {
@@ -281,7 +281,7 @@ function importEmail() {
     raw = $("#email_content").val()
     convert_links = $("#convert_links_checkbox").prop("checked")
     if (!raw) {
-        modalError("No Content Specified!")
+        modalError("No Content Specified!", "#importEmailFlashes")
     } else {
         api.import_email({
                 content: raw,
@@ -299,7 +299,7 @@ function importEmail() {
                 $("#importEmailModal").modal("hide")
             })
             .error(function (data) {
-                modalError(data.responseJSON.message)
+                modalError(data.responseJSON.message, "#importEmailFlashes")
             })
     }
 }
