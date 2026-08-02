@@ -20,6 +20,47 @@ To build Gophish from source, simply run ```git clone https://github.com/gophish
 
 ### Docker
 You can also use Gophish via the official Docker container [here](https://hub.docker.com/r/gophish/gophish/).
+The container starts without `config.json`; pass any overrides with `docker run -e NAME=value`.
+
+### Environment Configuration
+
+Environment variables override values from `config.json`. To run without a configuration file, pass an empty config path:
+
+```bash
+ADMIN_LISTEN_URL=127.0.0.1:3333 \
+ADMIN_USE_TLS=false \
+PHISH_LISTEN_URL=0.0.0.0:8080 \
+PHISH_USE_TLS=false \
+DB_NAME=sqlite3 \
+DB_PATH=gophish.db \
+MIGRATIONS_PREFIX=db/db_ \
+./gophish --config=""
+```
+
+Comma-separated values are accepted for list settings.
+
+| Environment variable | Configuration field |
+| --- | --- |
+| `ADMIN_LISTEN_URL` | `admin_server.listen_url` |
+| `ADMIN_USE_TLS` | `admin_server.use_tls` |
+| `ADMIN_CERT_PATH` | `admin_server.cert_path` |
+| `ADMIN_KEY_PATH` | `admin_server.key_path` |
+| `ADMIN_CSRF_KEY` | `admin_server.csrf_key` |
+| `ADMIN_ALLOWED_INTERNAL_HOSTS` | `admin_server.allowed_internal_hosts` |
+| `ADMIN_TRUSTED_ORIGINS` | `admin_server.trusted_origins` |
+| `PHISH_LISTEN_URL` | `phish_server.listen_url` |
+| `PHISH_USE_TLS` | `phish_server.use_tls` |
+| `PHISH_CERT_PATH` | `phish_server.cert_path` |
+| `PHISH_KEY_PATH` | `phish_server.key_path` |
+| `DB_NAME` | `db_name` |
+| `DB_PATH` | `db_path` (`DB_FILE_PATH` remains supported) |
+| `DB_SSLCA_PATH` | `db_sslca_path` |
+| `MIGRATIONS_PREFIX` | `migrations_prefix` |
+| `CONTACT_ADDRESS` | `contact_address` |
+| `LOGGING_FILENAME` | `logging.filename` |
+| `LOGGING_LEVEL` | `logging.level` |
+| `GOPHISH_INITIAL_ADMIN_PASSWORD` | Initial administrator password |
+| `GOPHISH_INITIAL_ADMIN_API_TOKEN` | Initial administrator API token |
 
 ### Setup
 After running the Gophish binary, open an Internet browser to https://localhost:3333 and login with the default username and password listed in the log output.
