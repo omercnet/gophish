@@ -44,6 +44,7 @@ const saveWebhook = (id) => {
 const load = () => {
     $("#webhookTable").hide();
     $("#loading").show();
+    const currentPage = $.fn.dataTable.isDataTable("#webhookTable") ? $("#webhookTable").DataTable().page() : 0;
     api.webhooks.get()
         .success((whs) => {
             webhooks = whs;
@@ -77,6 +78,7 @@ const load = () => {
                     `
                 ]).draw()
             })
+            webhookTable.page(currentPage).draw("page");
         })
         .error(() => {
             errorFlash("Error fetching webhooks")
@@ -135,15 +137,17 @@ const deleteWebhook = (id) => {
         }
     }).then(function(result) {
         if (result.value) {
+            webhooks = webhooks.filter(webhook => webhook.id != id);
+            $("#webhookTable").DataTable()
+                .row($(".delete_button[data-webhook-id='" + id + "']").parents("tr"))
+                .remove()
+                .draw(false);
             Swal.fire(
                 "Webhook Deleted!",
                 `The webhook has been deleted!`,
                 "success"
             );
         }
-        $("button:contains('OK')").on("click", function() {
-            location.reload();
-        })
     })
 };
 
