@@ -59,6 +59,7 @@ Comma-separated values are accepted for list settings.
 | `CONTACT_ADDRESS` | `contact_address` |
 | `LOGGING_FILENAME` | `logging.filename` |
 | `LOGGING_LEVEL` | `logging.level` |
+| `LOG_PRETTY` | `logging.pretty` (set `true` for text logs; JSON is the default) |
 | `GOPHISH_INITIAL_ADMIN_PASSWORD` | Initial administrator password |
 | `GOPHISH_INITIAL_ADMIN_API_TOKEN` | Initial administrator API token |
 
