@@ -95,6 +95,7 @@ function deleteCampaign(idx) {
         api.campaignId.delete(campaigns[idx].id)
             .success(function (data) {
                 successFlash(data.message)
+                sessionStorage.setItem("dashboardCampaignPage", campaignTable.page())
                 location.reload()
             })
     }
@@ -293,6 +294,8 @@ $(document).ready(function () {
         .success(function (data) {
             $("#loading").hide()
             campaigns = data.campaigns
+            var savedPage = parseInt(sessionStorage.getItem("dashboardCampaignPage") || 0)
+            sessionStorage.removeItem("dashboardCampaignPage")
             if (campaigns.length > 0) {
                 $("#dashboard").show()
                 // Create the overview chart data
@@ -359,6 +362,7 @@ $(document).ready(function () {
                     $('[data-toggle="tooltip"]').tooltip()
                 })
                 campaignTable.rows.add(campaignRows).draw()
+                campaignTable.page(Math.min(savedPage, Math.max(0, campaignTable.page.info().pages - 1))).draw('page')
                 // Build the charts
                 generateStatsPieCharts(campaigns)
                 generateTimelineChart(campaigns)
