@@ -45,6 +45,7 @@ func removeTemporaryConfig(t *testing.T, f *os.File) {
 }
 
 func TestLoadConfig(t *testing.T) {
+	clearConfigEnv(t)
 	f := createTemporaryConfig(t)
 	defer removeTemporaryConfig(t, f)
 	_, err := f.Write(validConfig)

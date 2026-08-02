@@ -2,7 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"os"
 
 	log "github.com/gophish/gophish/logger"
 )
@@ -45,20 +46,23 @@ var Version = ""
 // ServerName is the server type that is returned in the transparency response.
 const ServerName = "gophish"
 
-// LoadConfig loads the configuration from the specified filepath
+// LoadConfig loads an optional JSON configuration file, then applies environment overrides.
 func LoadConfig(filepath string) (*Config, error) {
-	// Get the config file
-	configFile, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
 	config := &Config{}
-	err = json.Unmarshal(configFile, config)
-	if err != nil {
-		return nil, err
+	if filepath != "" {
+		configFile, err := os.ReadFile(filepath)
+		if err != nil {
+			return nil, fmt.Errorf("read config %s: %w", filepath, err)
+		}
+		if err := json.Unmarshal(configFile, config); err != nil {
+			return nil, fmt.Errorf("decode config %s: %w", filepath, err)
+		}
 	}
 	if config.Logging == nil {
 		config.Logging = &log.Config{}
+	}
+	if err := applyEnvironment(config); err != nil {
+		return nil, err
 	}
 	// Choosing the migrations directory based on the database used.
 	config.MigrationsPath = config.MigrationsPath + config.DBName
