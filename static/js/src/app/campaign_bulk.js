@@ -43,6 +43,9 @@ var campaignBulk = (function () {
                 var completed = result.value.data.results.length - failures.length
                 Swal.fire("Completed with errors", completed + " completed; " + failures.length + " failed: " + failures.map(function (item) { return item.id + ": " + item.message }).join("; "), "warning").then(reloadCampaigns)
                 return
+			}
+			reloadCampaigns()
+		})
 	}
 
 	function resend() {
@@ -75,9 +78,6 @@ var campaignBulk = (function () {
 			var queued = result.value.reduce(function (total, item) { return total + item.queued }, 0)
 			successFlash(queued + " failed email(s) queued for retry.")
 		})
-	}
-            reloadCampaigns()
-        })
 	}
 
     function reloadCampaigns() {
