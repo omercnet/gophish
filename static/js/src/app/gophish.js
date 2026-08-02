@@ -30,9 +30,11 @@ function successFlashFade(message, fade) {
 
 }
 
-function modalError(message) {
-    $("#modal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-danger\">\
-        <i class=\"fa fa-exclamation-circle\"></i> " + message + "</div>")
+function modalError(message, target) {
+    $(target || "#modal\\.flashes").empty().append(
+        $("<div>", {class: "alert alert-danger", style: "text-align:center"})
+            .append($("<i>", {class: "fa fa-exclamation-circle"}), document.createTextNode(" " + message))
+    )
 }
 
 function query(endpoint, method, data, async) {
