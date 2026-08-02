@@ -104,9 +104,12 @@ var api = {
             return query("/campaigns/" + id + "/results", "GET", {}, true)
         },
         // complete() - Completes a campaign at POST /campaigns/:id/complete
-        complete: function (id) {
-            return query("/campaigns/" + id + "/complete", "GET", {}, true)
-        },
+		complete: function (id) {
+			return query("/campaigns/" + id + "/complete", "GET", {}, true)
+		},
+		resendErrors: function (id) {
+			return query("/campaigns/" + id + "/resend-errors", "POST", {}, true)
+		},
         // summary() - Queries the API for GET /campaigns/summary
         summary: function (id) {
             return query("/campaigns/" + id + "/summary", "GET", {}, true)
