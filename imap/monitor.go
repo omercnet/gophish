@@ -24,7 +24,7 @@ import (
 // Pattern for GoPhish emails e.g ?rid=AbC1234
 // We include the optional quoted-printable 3D at the front, just in case decoding fails. e.g ?rid=3DAbC1234
 // We also include alternative URL encoded representations of '=' and '?' to handle Microsoft ATP URLs e.g %3Frid%3DAbC1234
-var goPhishRegex = regexp.MustCompile("((\\?|%3F)rid(=|%3D)(3D)?([A-Za-z0-9]{7}))")
+var goPhishRegex = regexp.MustCompile(`((\?|%3F)rid(=|%3D)(3D)?([A-Za-z0-9]{7}))`)
 
 // Monitor is a worker that monitors IMAP servers for reported campaign emails
 type Monitor struct {
@@ -138,8 +138,8 @@ func checkForNewEmails(im models.IMAP) {
 
 	if len(msgs) > 0 {
 		log.Debugf("%d new emails for %s", len(msgs), im.Username)
-		var reportingFailed []uint32 // SeqNums of emails that were unable to be reported to phishing server, mark as unread
-		var deleteEmails []uint32    // SeqNums of campaign emails. If DeleteReportedCampaignEmail is true, we will delete these
+		var reportingFailed []Email
+		var deleteEmails []Email
 		for _, m := range msgs {
 			// Check if sender is from company's domain, if enabled. TODO: Make this an IMAP filter
 			if im.RestrictDomain != "" { // e.g domainResitct = widgets.com
@@ -166,7 +166,7 @@ func checkForNewEmails(im models.IMAP) {
 				result, err := models.GetResult(rid)
 				if err != nil {
 					log.Error("Error reporting GoPhish email with rid ", rid, ": ", err.Error())
-					reportingFailed = append(reportingFailed, m.SeqNum)
+					reportingFailed = append(reportingFailed, m)
 					continue
 				}
 				err = result.HandleEmailReport(models.EventDetails{})
@@ -175,7 +175,7 @@ func checkForNewEmails(im models.IMAP) {
 					continue
 				}
 				if im.DeleteReportedCampaignEmail {
-					deleteEmails = append(deleteEmails, m.SeqNum)
+					deleteEmails = append(deleteEmails, m)
 				}
 			}
 
