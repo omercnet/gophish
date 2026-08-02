@@ -118,6 +118,27 @@ func (s *ModelsSuite) TestClaimQueuedMailLogs_claims_once(ch *check.C) {
 	ch.Assert(len(claimedAgain), check.Equals, 0)
 }
 
+func (s *ModelsSuite) TestResendErroredResults(ch *check.C) {
+	campaign := s.createCampaign(ch)
+	mailLogs, err := GetMailLogsByCampaign(campaign.Id)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(mailLogs[0].Error(fmt.Errorf("permanent failure")), check.Equals, nil)
+
+	queued, err := ResendErroredResults(campaign.Id, campaign.UserId, time.Now().UTC())
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(queued, check.Equals, 1)
+	queued, err = ResendErroredResults(campaign.Id, campaign.UserId, time.Now().UTC())
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(queued, check.Equals, 0)
+
+	result, err := GetResult(campaign.Results[0].RId)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(result.Status, check.Equals, StatusSending)
+	mailLogs, err = GetMailLogsByCampaign(campaign.Id)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(len(mailLogs), check.Equals, len(campaign.Results))
+}
+
 func (s *ModelsSuite) TestClaimQueuedMailLogs_skips_terminal_results(ch *check.C) {
 	campaign := s.createCampaign(ch)
 	mailLogs, err := GetMailLogsByCampaign(campaign.Id)

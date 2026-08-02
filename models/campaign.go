@@ -127,6 +127,7 @@ var ErrSMTPNotFound = errors.New("Sending profile not found")
 var ErrInvalidSendByDate = errors.New("The launch date must be before the \"send emails by\" date")
 
 var ErrCampaignProcessing = errors.New("campaign has emails being processed")
+var ErrCampaignNotActive = errors.New("campaign is not active")
 
 // RecipientParameter is the URL parameter that points to the result ID for a recipient.
 const RecipientParameter = "rid"
