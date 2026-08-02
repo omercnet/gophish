@@ -7,15 +7,11 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goVer: [1.21, 1.22, 1.23]
-
     steps:
-    - name: Set up Go ${{ matrix.goVer }}
+    - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ matrix.goVer }}
+        go-version-file: go.mod
       id: go
 
     - name: Check out code into the Go module directory
