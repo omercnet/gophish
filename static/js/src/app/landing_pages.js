@@ -73,15 +73,13 @@ var deletePage = function (idx) {
         }
     }).then(function (result) {
         if (result.value){
+            $("#pagesTable").DataTable().row($(".delete_page[data-page-id='" + pages[idx].id + "']").parents('tr')).remove().draw(false)
             Swal.fire(
                 'Landing Page Deleted!',
                 'This landing page has been deleted!',
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -146,6 +144,7 @@ function load() {
     $("#pagesTable").hide()
     $("#emptyMessage").hide()
     $("#loading").show()
+    var currentPage = $.fn.dataTable.isDataTable("#pagesTable") ? $("#pagesTable").DataTable().page() : 0
     api.pages.get()
         .success(function (ps) {
             pages = ps
@@ -171,12 +170,13 @@ function load() {
 		    <span data-toggle='modal' data-target='#modal'><button class='btn btn-primary' data-toggle='tooltip' data-placement='left' title='Copy Page' onclick='copy(" + i + ")'>\
                     <i class='fa fa-copy'></i>\
                     </button></span>\
-                    <button class='btn btn-danger' data-toggle='tooltip' data-placement='left' title='Delete Page' onclick='deletePage(" + i + ")'>\
+                    <button class='btn btn-danger delete_page' data-page-id='" + page.id + "' data-toggle='tooltip' data-placement='left' title='Delete Page' onclick='deletePage(" + i + ")'>\
                     <i class='fa fa-trash-o'></i>\
                     </button></div>"
                     ])
                 })
                 pagesTable.rows.add(pageRows).draw()
+                pagesTable.page(currentPage).draw('page')
                 $('[data-toggle="tooltip"]').tooltip()
             } else {
                 $("#emptyMessage").show()
