@@ -33,6 +33,9 @@ func applyEnvironment(config *Config) error {
 	setString("CONTACT_ADDRESS", &config.ContactAddress)
 	setString("LOGGING_FILENAME", &config.Logging.Filename)
 	setString("LOGGING_LEVEL", &config.Logging.Level)
+	if err := setBool("LOG_PRETTY", &config.Logging.Pretty); err != nil {
+		return err
+	}
 	return nil
 }
 

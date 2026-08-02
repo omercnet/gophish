@@ -30,6 +30,7 @@ var configEnvVars = []string{
 	"CONTACT_ADDRESS",
 	"LOGGING_FILENAME",
 	"LOGGING_LEVEL",
+	"LOG_PRETTY",
 }
 
 func clearConfigEnv(t *testing.T) {
@@ -74,6 +75,7 @@ func TestLoadConfig_from_environment_without_file(t *testing.T) {
 		"CONTACT_ADDRESS":              "security@example.com",
 		"LOGGING_FILENAME":             "gophish.log",
 		"LOGGING_LEVEL":                "debug",
+		"LOG_PRETTY":                   "true",
 	}
 	for name, value := range values {
 		t.Setenv(name, value)
@@ -105,7 +107,7 @@ func TestLoadConfig_from_environment_without_file(t *testing.T) {
 		DBSSLCaPath:    "ca.pem",
 		MigrationsPath: "migrations/sqlite3",
 		ContactAddress: "security@example.com",
-		Logging:        &log.Config{Filename: "gophish.log", Level: "debug"},
+		Logging:        &log.Config{Filename: "gophish.log", Level: "debug", Pretty: true},
 	}
 	if !reflect.DeepEqual(expected, conf) {
 		t.Fatalf("invalid environment config. expected %#v got %#v", expected, conf)
