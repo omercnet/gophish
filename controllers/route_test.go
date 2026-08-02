@@ -33,7 +33,6 @@ func attemptLogin(t *testing.T, ctx *testContext, client *http.Client, username,
 	if client == nil {
 		client = &http.Client{}
 	}
-
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/login%s", ctx.adminServer.URL, optionalPath), strings.NewReader(url.Values{
 		"username":   {username},
 		"password":   {password},
@@ -43,7 +42,6 @@ func attemptLogin(t *testing.T, ctx *testContext, client *http.Client, username,
 		t.Fatalf("error creating new /login request: %v", err)
 	}
 
-	req.Header.Set("Cookie", resp.Header.Get("Set-Cookie"))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err = client.Do(req)
@@ -56,12 +54,16 @@ func attemptLogin(t *testing.T, ctx *testContext, client *http.Client, username,
 func TestLoginCSRF(t *testing.T) {
 	ctx := setupTest(t)
 	defer tearDown(t, ctx)
-	resp, err := http.PostForm(fmt.Sprintf("%s/login", ctx.adminServer.URL),
-		url.Values{
-			"username": {"admin"},
-			"password": {"gophish"},
-		})
-
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login", ctx.adminServer.URL), strings.NewReader(url.Values{
+		"username": {"admin"},
+		"password": {"gophish"},
+	}.Encode()))
+	if err != nil {
+		t.Fatalf("error creating /login request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("error requesting the /login endpoint: %v", err)
 	}
