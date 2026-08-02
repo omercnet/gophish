@@ -149,15 +149,15 @@ function deleteCampaign(idx) {
         }
     }).then(function (result) {
         if (result.value){
+            var deletedCampaign = campaigns[idx]
+            var table = deletedCampaign.status == 'Completed' ? archivedCampaignsTable : activeCampaignsTable
+            table.row($("button[onclick='deleteCampaign(" + idx + ")']").parents('tr')).remove().draw(false)
             Swal.fire(
                 'Campaign Deleted!',
                 'This campaign has been deleted!',
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -342,6 +342,10 @@ $(document).ready(function () {
         .success(function (data) {
             campaigns = data.campaigns
             $("#loading").hide()
+            var activePage = parseInt(sessionStorage.getItem("activeCampaignPage") || 0)
+            var archivedPage = parseInt(sessionStorage.getItem("archivedCampaignPage") || 0)
+            sessionStorage.removeItem("activeCampaignPage")
+            sessionStorage.removeItem("archivedCampaignPage")
             if (campaigns.length > 0) {
                 $("#campaignTable").show()
                 $("#campaignTableArchive").show()
@@ -404,6 +408,8 @@ $(document).ready(function () {
                 })
                 activeCampaignsTable.rows.add(rows['active']).draw()
                 archivedCampaignsTable.rows.add(rows['archived']).draw()
+                activeCampaignsTable.page(Math.min(activePage, Math.max(0, activeCampaignsTable.page.info().pages - 1))).draw('page')
+                archivedCampaignsTable.page(Math.min(archivedPage, Math.max(0, archivedCampaignsTable.page.info().pages - 1))).draw('page')
                 $('[data-toggle="tooltip"]').tooltip()
             } else {
                 $("#emptyMessage").show()
@@ -427,6 +433,10 @@ $(document).ready(function () {
             }
             return 0;
         });
+    })
+    $("#campaignTable, #campaignTableArchive").on("click", "a[href^='/campaigns/']", function () {
+        sessionStorage.setItem("activeCampaignPage", activeCampaignsTable.page())
+        sessionStorage.setItem("archivedCampaignPage", archivedCampaignsTable.page())
     })
     campaignBulk.bind()
 })
