@@ -53,6 +53,7 @@ scripts = function () {
     return gulp.src([
             app_directory + 'autocomplete.js',
             app_directory + 'campaign_results.js',
+            app_directory + 'campaign_bulk.js',
             app_directory + 'campaigns.js',
             app_directory + 'dashboard.js',
             app_directory + 'groups.js',
