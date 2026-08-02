@@ -103,15 +103,13 @@ var deleteTemplate = function (idx) {
         }
     }).then(function (result) {
         if(result.value) {
+            $("#templateTable").DataTable().row($(".delete_template[data-template-id='" + templates[idx].id + "']").parents('tr')).remove().draw(false)
             Swal.fire(
                 'Template Deleted!',
                 'This template has been deleted!',
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -151,7 +149,7 @@ function attach(files) {
                 '<span class="remove-row"><i class="fa fa-trash-o"></i></span>',
                 reader.result.split(",")[1],
                 file.type || "application/octet-stream"
-            ]).draw()
+            ]).draw(false)
         }
         reader.onerror = function (e) {
             console.log(e)
@@ -220,7 +218,7 @@ function edit(idx) {
     $("#attachmentsTable").unbind('click').on("click", "span>i.fa-trash-o", function () {
         attachmentsTable.row($(this).parents('tr'))
             .remove()
-            .draw();
+            .draw(false);
     })
 }
 
@@ -264,13 +262,13 @@ function copy(idx) {
             '<span class="remove-row"><i class="fa fa-trash-o"></i></span>',
             file.content,
             file.type || "application/octet-stream"
-        ]).draw()
+        ]).draw(false)
     })
     // Handle Deletion
     $("#attachmentsTable").unbind('click').on("click", "span>i.fa-trash-o", function () {
         attachmentsTable.row($(this).parents('tr'))
             .remove()
-            .draw();
+            .draw(false);
     })
     if (template.html.indexOf("{{.Tracker}}") != -1) {
         $("#use_tracker_checkbox").prop("checked", true)
@@ -310,6 +308,7 @@ function load() {
     $("#templateTable").hide()
     $("#emptyMessage").hide()
     $("#loading").show()
+    var currentPage = $.fn.dataTable.isDataTable("#templateTable") ? $("#templateTable").DataTable().page() : 0
     api.templates.get()
         .success(function (ts) {
             templates = ts
@@ -335,12 +334,13 @@ function load() {
 		    <span data-toggle='modal' data-target='#modal'><button class='btn btn-primary' data-toggle='tooltip' data-placement='left' title='Copy Template' onclick='copy(" + i + ")'>\
                     <i class='fa fa-copy'></i>\
                     </button></span>\
-                    <button class='btn btn-danger' data-toggle='tooltip' data-placement='left' title='Delete Template' onclick='deleteTemplate(" + i + ")'>\
+                    <button class='btn btn-danger delete_template' data-template-id='" + template.id + "' data-toggle='tooltip' data-placement='left' title='Delete Template' onclick='deleteTemplate(" + i + ")'>\
                     <i class='fa fa-trash-o'></i>\
                     </button></div>"
                     ])
                 })
                 templateTable.rows.add(templateRows).draw()
+                templateTable.page(currentPage).draw('page')
                 $('[data-toggle="tooltip"]').tooltip()
             } else {
                 $("#emptyMessage").show()
