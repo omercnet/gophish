@@ -127,15 +127,13 @@ var deleteProfile = function (idx) {
         }
     }).then(function (result) {
         if (result.value){
+            $("#profileTable").DataTable().row($(".delete_profile[data-profile-id='" + profiles[idx].id + "']").parents('tr')).remove().draw(false)
             Swal.fire(
                 'Sending Profile Deleted!',
                 'This sending profile has been deleted!',
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -189,6 +187,7 @@ function load() {
     $("#profileTable").hide()
     $("#emptyMessage").hide()
     $("#loading").show()
+    var currentPage = $.fn.dataTable.isDataTable("#profileTable") ? $("#profileTable").DataTable().page() : 0
     api.SMTP.get()
         .success(function (ss) {
             profiles = ss
@@ -215,12 +214,13 @@ function load() {
 		    <span data-toggle='modal' data-target='#modal'><button class='btn btn-primary' data-toggle='tooltip' data-placement='left' title='Copy Profile' onclick='copy(" + i + ")'>\
                     <i class='fa fa-copy'></i>\
                     </button></span>\
-                    <button class='btn btn-danger' data-toggle='tooltip' data-placement='left' title='Delete Profile' onclick='deleteProfile(" + i + ")'>\
+                    <button class='btn btn-danger delete_profile' data-profile-id='" + profile.id + "' data-toggle='tooltip' data-placement='left' title='Delete Profile' onclick='deleteProfile(" + i + ")'>\
                     <i class='fa fa-trash-o'></i>\
                     </button></div>"
                     ])
                 })
                 profileTable.rows.add(profileRows).draw()
+                profileTable.page(currentPage).draw('page')
                 $('[data-toggle="tooltip"]').tooltip()
             } else {
                 $("#emptyMessage").show()
@@ -257,7 +257,7 @@ function addCustomHeader(header, value) {
     } else {
         headersTable.row.add(newRow);
     }
-    headersTable.draw();
+    headersTable.draw(false);
 }
 
 $(document).ready(function () {
@@ -329,7 +329,7 @@ $(document).ready(function () {
         headers.DataTable()
             .row($(this).parents('tr'))
             .remove()
-            .draw();
+            .draw(false);
     });
     load()
 })
