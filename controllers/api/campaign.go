@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	ctx "github.com/gophish/gophish/context"
 	log "github.com/gophish/gophish/logger"
@@ -197,4 +198,24 @@ func (as *Server) CampaignsComplete(w http.ResponseWriter, r *http.Request) {
 		results = append(results, result)
 	}
 	JSONResponse(w, models.Response{Success: allSucceeded, Data: map[string]interface{}{"results": results}}, http.StatusOK)
+}
+
+func (as *Server) CampaignResendErrors(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	id, _ := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+	queued, err := models.ResendErroredResults(id, ctx.Get(r, "user_id").(int64), time.Now().UTC())
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		JSONResponse(w, models.Response{Success: false, Message: "Campaign not found"}, http.StatusNotFound)
+	case errors.Is(err, models.ErrCampaignNotActive):
+		JSONResponse(w, models.Response{Success: false, Message: err.Error()}, http.StatusConflict)
+	case err != nil:
+		JSONResponse(w, models.Response{Success: false, Message: "Error retrying failed emails"}, http.StatusInternalServerError)
+	default:
+		JSONResponse(w, models.Response{Success: true, Data: map[string]interface{}{"queued": queued}}, http.StatusAccepted)
+	}
 }

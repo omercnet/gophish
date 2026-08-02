@@ -17,6 +17,7 @@ import (
 	"github.com/gophish/gophish/config"
 	log "github.com/gophish/gophish/logger"
 	"github.com/gophish/gophish/mailer"
+	"github.com/jinzhu/gorm"
 )
 
 // MaxSendAttempts set to 8 since we exponentially backoff after each failed send
@@ -311,6 +312,60 @@ func claimMailLogs(t time.Time, where string, args ...interface{}) ([]*MailLog, 
 		return nil, err
 	}
 	return claimed, nil
+}
+
+func ResendErroredResults(campaignID, userID int64, now time.Time) (int, error) {
+	tx := db.Begin()
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+	defer tx.Rollback()
+
+	locked := tx.Model(&Campaign{}).
+		Where("id = ? AND user_id = ?", campaignID, userID).
+		UpdateColumn("status", gorm.Expr("status"))
+	if locked.Error != nil {
+		return 0, locked.Error
+	}
+	campaign := Campaign{}
+	if err := tx.Where("id = ? AND user_id = ?", campaignID, userID).First(&campaign).Error; err != nil {
+		return 0, err
+	}
+	if campaign.Status != CampaignInProgress {
+		return 0, ErrCampaignNotActive
+	}
+
+	results := []Result{}
+	if err := tx.Where("campaign_id = ? AND user_id = ? AND status = ?", campaignID, userID, Error).Find(&results).Error; err != nil {
+		return 0, err
+	}
+	queued := 0
+	for i := range results {
+		result := &results[i]
+		if err := tx.Where("campaign_id = ? AND r_id = ?", campaignID, result.RId).Delete(&MailLog{}).Error; err != nil {
+			return 0, err
+		}
+		updated := tx.Model(&Result{}).Where("id = ? AND status = ?", result.Id, Error).Updates(map[string]interface{}{
+			"status":        StatusSending,
+			"send_date":     now.UTC(),
+			"modified_date": now.UTC(),
+		})
+		if updated.Error != nil {
+			return 0, updated.Error
+		}
+		if updated.RowsAffected == 0 {
+			continue
+		}
+		mailLog := MailLog{CampaignId: campaignID, UserId: userID, RId: result.RId, SendDate: now.UTC()}
+		if err := tx.Create(&mailLog).Error; err != nil {
+			return 0, err
+		}
+		queued++
+	}
+	if err := tx.Commit().Error; err != nil {
+		return 0, err
+	}
+	return queued, nil
 }
 
 // GetMailLogsByCampaign returns all of the mail logs for a given campaign.
