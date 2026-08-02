@@ -123,15 +123,17 @@ const deleteUser = (id) => {
         }
     }).then(function (result) {
         if (result.value){
+            users = users.filter(user => user.id != id)
+            $("#userTable").DataTable()
+                .row($(".delete_button[data-user-id='" + id + "']").parents('tr'))
+                .remove()
+                .draw(false)
             Swal.fire(
                 'User Deleted!',
                 "The user account for " + escapeHtml(user.username) + " and all associated objects have been deleted!",
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -188,6 +190,7 @@ const impersonate = (id) => {
 const load = () => {
     $("#userTable").hide()
     $("#loading").show()
+    const currentPage = $.fn.dataTable.isDataTable("#userTable") ? $("#userTable").DataTable().page() : 0
     api.users.get()
         .success((us) => {
             users = us
@@ -224,6 +227,7 @@ const load = () => {
                 ])
             })
             userTable.rows.add(userRows).draw();
+            userTable.page(currentPage).draw('page');
         })
         .error(() => {
             errorFlash("Error fetching users")
