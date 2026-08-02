@@ -23,6 +23,9 @@ function save(idx) {
                 load()
                 dismiss()
             })
+            .error(function (data) {
+                modalError(data.responseJSON.message)
+            })
     } else {
         // Submit the page
         api.pages.post(page)
@@ -86,7 +89,7 @@ var deletePage = function (idx) {
 function importSite() {
     url = $("#url").val()
     if (!url) {
-        modalError("No URL Specified!")
+        modalError("No URL Specified!", "#importSiteFlashes")
     } else {
         api.clone_site({
                 url: url,
@@ -98,13 +101,13 @@ function importSite() {
                 $("#importSiteModal").modal("hide")
             })
             .error(function (data) {
-                modalError(data.responseJSON.message)
+                modalError(data.responseJSON.message, "#importSiteFlashes")
             })
     }
 }
 
 function edit(idx) {
-    $("#modalSubmit").unbind('click').click(function () {
+    $("#modal #modalSubmit").unbind('click').click(function () {
         save(idx)
     })
     $("#html_editor").ckeditor()
@@ -128,13 +131,20 @@ function edit(idx) {
 }
 
 function copy(idx) {
-    $("#modalSubmit").unbind('click').click(function () {
+    $("#modal #modalSubmit").unbind('click').click(function () {
         save(-1)
     })
     $("#html_editor").ckeditor()
     var page = pages[idx]
     $("#name").val("Copy of " + page.name)
     $("#html_editor").val(page.html)
+    $("#capture_credentials_checkbox").prop("checked", page.capture_credentials)
+    $("#capture_passwords_checkbox").prop("checked", page.capture_passwords)
+    $("#redirect_url_input").val(page.redirect_url)
+    if (page.capture_credentials) {
+        $("#capture_passwords").show()
+        $("#redirect_url").show()
+    }
 }
 
 function load() {
