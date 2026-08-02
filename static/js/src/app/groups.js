@@ -112,7 +112,7 @@ function edit(id) {
                     record.email,
                     record.position);
             });
-            targets.DataTable().draw();
+            targets.DataTable().draw(false);
         }
     })
 }
@@ -173,15 +173,14 @@ var deleteGroup = function (id) {
         }
     }).then(function (result) {
         if (result.value){
+            $("#groupTable").DataTable().row($(".delete_group[data-group-id='" + id + "']").parents('tr')).remove().draw(false)
+            groups = groups.filter(function (item) { return item.id !== id })
             Swal.fire(
                 'Group Deleted!',
                 'This group has been deleted!',
                 'success'
             );
         }
-        $('button:contains("OK")').on('click', function () {
-            location.reload()
-        })
     })
 }
 
@@ -220,6 +219,7 @@ function load() {
     $("#groupTable").hide()
     $("#emptyMessage").hide()
     $("#loading").show()
+    var currentPage = $.fn.dataTable.isDataTable("#groupTable") ? $("#groupTable").DataTable().page() : 0
     api.groups.summary()
         .success(function (response) {
             $("#loading").hide()
@@ -244,12 +244,13 @@ function load() {
                         "<div class='pull-right'><button class='btn btn-primary' data-toggle='modal' data-backdrop='static' data-target='#modal' onclick='edit(" + group.id + ")'>\
                     <i class='fa fa-pencil'></i>\
                     </button>\
-                    <button class='btn btn-danger' onclick='deleteGroup(" + group.id + ")'>\
+                    <button class='btn btn-danger delete_group' data-group-id='" + group.id + "' onclick='deleteGroup(" + group.id + ")'>\
                     <i class='fa fa-trash-o'></i>\
                     </button></div>"
                     ])
                 })
                 groupTable.rows.add(groupRows).draw()
+                groupTable.page(currentPage).draw('page')
             } else {
                 $("#emptyMessage").show()
             }
@@ -275,7 +276,7 @@ $(document).ready(function () {
             $("#lastName").val(),
             $("#email").val(),
             $("#position").val());
-        targets.DataTable().draw();
+        targets.DataTable().draw(false);
 
         // Reset user input.
         $("#targetForm>div>input").val('');
@@ -287,7 +288,7 @@ $(document).ready(function () {
         targets.DataTable()
             .row($(this).parents('tr'))
             .remove()
-            .draw();
+            .draw(false);
     });
     $("#modal").on("hide.bs.modal", function () {
         dismiss();
