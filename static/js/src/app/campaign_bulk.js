@@ -41,7 +41,7 @@ var campaignBulk = (function () {
             var failures = result.value.data.results.filter(function (item) { return item.status !== "completed" })
             if (failures.length > 0) {
                 var completed = result.value.data.results.length - failures.length
-                Swal.fire("Completed with errors", completed + " completed; " + failures.length + " failed: " + failures.map(function (item) { return item.id + ": " + item.message }).join("; "), "warning").then(function () { location.reload() })
+                Swal.fire("Completed with errors", completed + " completed; " + failures.length + " failed: " + failures.map(function (item) { return item.id + ": " + item.message }).join("; "), "warning").then(reloadCampaigns)
                 return
 	}
 
@@ -69,15 +69,20 @@ var campaignBulk = (function () {
 			var failures = result.value.filter(function (item) { return item.error })
 			if (failures.length > 0) {
 				var queuedWithErrors = result.value.reduce(function (total, item) { return total + (item.queued || 0) }, 0)
-				Swal.fire("Retry completed with errors", queuedWithErrors + " queued; " + failures.length + " failed: " + failures.map(function (item) { return item.id + ": " + item.error }).join("; "), "warning").then(function () { location.reload() })
+                Swal.fire("Retry completed with errors", queuedWithErrors + " queued; " + failures.length + " failed: " + failures.map(function (item) { return item.id + ": " + item.error }).join("; "), "warning").then(reloadCampaigns)
 				return
 			}
 			var queued = result.value.reduce(function (total, item) { return total + item.queued }, 0)
 			successFlash(queued + " failed email(s) queued for retry.")
 		})
 	}
-            location.reload()
+            reloadCampaigns()
         })
+	}
+
+    function reloadCampaigns() {
+        sessionStorage.setItem("activeCampaignPage", activeCampaignsTable.page())
+        location.reload()
     }
 
     function bind() {
