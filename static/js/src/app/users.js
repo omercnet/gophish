@@ -1,4 +1,5 @@
 let users = []
+let activeUserId = null
 
 // Save attempts to POST or PUT to /users/
 const save = (id) => {
@@ -46,6 +47,7 @@ const save = (id) => {
 }
 
 const dismiss = () => {
+    activeUserId = null
     $("#username").val("")
     $("#password").val("")
     $("#confirm_password").val("")
@@ -56,6 +58,7 @@ const dismiss = () => {
 }
 
 const edit = (id) => {
+    activeUserId = id
     $("#username").attr("disabled", false);
     $("#modalSubmit").unbind('click').click(() => {
         save(id)
@@ -69,6 +72,9 @@ const edit = (id) => {
         $("#userModalLabel").text("Edit User")
         api.userId.get(id)
             .success((user) => {
+                if (activeUserId != id) {
+                    return
+                }
                 $("#username").val(user.username)
                 $("#role").val(user.role.slug)
                 $("#role").trigger("change")
@@ -157,7 +163,7 @@ const impersonate = (id) => {
 
          fetch('/impersonate', {
                 method: 'post',
-                body: "username=" + user.username + "&csrf_token=" + encodeURIComponent(csrf_token),
+                body: "username=" + encodeURIComponent(user.username) + "&csrf_token=" + encodeURIComponent(csrf_token),
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                   },
@@ -182,6 +188,13 @@ const impersonate = (id) => {
                         showCancelButton: false,
                     })
                 }
+            }).catch(() => {
+                Swal.fire({
+                    title: "Error!",
+                    type: "error",
+                    html: "Failed to change to user <strong>" + escapeHtml(user.username) + "</strong>.",
+                    showCancelButton: false,
+                })
             })
         }
       })
