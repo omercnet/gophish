@@ -66,7 +66,9 @@ func (m *MailLog) Backoff(reason error) error {
 		return err
 	}
 	if m.SendAttempt == MaxSendAttempts {
-		r.HandleEmailError(ErrMaxSendAttempts)
+		if err := m.Error(ErrMaxSendAttempts); err != nil {
+			return err
+		}
 		return ErrMaxSendAttempts
 	}
 	// Add an error, since we had to backoff because of a
@@ -274,10 +276,47 @@ func GetQueuedMailLogs(t time.Time) ([]*MailLog, error) {
 	return ms, err
 }
 
+func ClaimQueuedMailLogs(t time.Time) ([]*MailLog, error) {
+	return claimMailLogs(t, "send_date <= ? AND processing = ?", t, false)
+}
+
+func ClaimCampaignMailLogs(campaignID int64, t time.Time) ([]*MailLog, error) {
+	return claimMailLogs(t, "campaign_id = ? AND send_date <= ? AND processing = ?", campaignID, t, false)
+}
+
+func claimMailLogs(t time.Time, where string, args ...interface{}) ([]*MailLog, error) {
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	defer tx.Rollback()
+	candidates := []*MailLog{}
+	if err := tx.Where(where, args...).Find(&candidates).Error; err != nil {
+		return nil, err
+	}
+	claimed := make([]*MailLog, 0, len(candidates))
+	for _, candidate := range candidates {
+		result := tx.Model(&MailLog{}).
+			Where("id = ? AND processing = ? AND send_date <= ? AND EXISTS (SELECT 1 FROM campaigns WHERE campaigns.id = mail_logs.campaign_id AND campaigns.status IN (?, ?, ?)) AND EXISTS (SELECT 1 FROM results WHERE results.campaign_id = mail_logs.campaign_id AND results.r_id = mail_logs.r_id AND results.status IN (?, ?, ?))", candidate.Id, false, t, CampaignQueued, CampaignInProgress, CampaignEmailsSent, StatusScheduled, StatusSending, StatusRetry).
+			UpdateColumn("processing", true)
+		if result.Error != nil {
+			return nil, result.Error
+		}
+		if result.RowsAffected == 1 {
+			candidate.Processing = true
+			claimed = append(claimed, candidate)
+		}
+	}
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	return claimed, nil
+}
+
 // GetMailLogsByCampaign returns all of the mail logs for a given campaign.
 func GetMailLogsByCampaign(cid int64) ([]*MailLog, error) {
 	ms := []*MailLog{}
-	err := db.Where("campaign_id = ?", cid).Find(&ms).Error
+	err := db.Where("campaign_id = ?", cid).Order("send_date asc, id asc").Find(&ms).Error
 	return ms, err
 }
 

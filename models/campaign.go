@@ -126,6 +126,8 @@ var ErrSMTPNotFound = errors.New("Sending profile not found")
 // launch date
 var ErrInvalidSendByDate = errors.New("The launch date must be before the \"send emails by\" date")
 
+var ErrCampaignProcessing = errors.New("campaign has emails being processed")
+
 // RecipientParameter is the URL parameter that points to the result ID for a recipient.
 const RecipientParameter = "rid"
 
@@ -271,15 +273,15 @@ func getCampaignStats(cid int64) (CampaignStats, error) {
 	if err != nil {
 		return s, err
 	}
-	query.Where("status=?", EventDataSubmit).Count(&s.SubmittedData)
+	err = query.Where("status=?", EventDataSubmit).Count(&s.SubmittedData).Error
 	if err != nil {
 		return s, err
 	}
-	query.Where("status=?", EventClicked).Count(&s.ClickedLink)
+	err = query.Where("status=?", EventClicked).Count(&s.ClickedLink).Error
 	if err != nil {
 		return s, err
 	}
-	query.Where("reported=?", true).Count(&s.EmailReported)
+	err = query.Where("reported=?", true).Count(&s.EmailReported).Error
 	if err != nil {
 		return s, err
 	}
@@ -570,10 +572,8 @@ func PostCampaign(c *Campaign, uid int64) error {
 				tx.Rollback()
 				return err
 			}
-			processing := false
 			if r.SendDate.Before(c.CreatedDate) || r.SendDate.Equal(c.CreatedDate) {
 				r.Status = StatusSending
-				processing = true
 			}
 			err = tx.Save(r).Error
 			if err != nil {
@@ -593,7 +593,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 				CampaignId: c.Id,
 				RId:        r.RId,
 				SendDate:   sendDate,
-				Processing: processing,
+				Processing: false,
 			}
 			err = tx.Save(m).Error
 			if err != nil {
@@ -644,27 +644,37 @@ func CompleteCampaign(id int64, uid int64) error {
 	log.WithFields(logrus.Fields{
 		"campaign_id": id,
 	}).Info("Marking campaign as complete")
-	c, err := GetCampaign(id, uid)
-	if err != nil {
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer tx.Rollback()
+	locked := tx.Model(&Campaign{}).Where("id = ? AND user_id = ?", id, uid).UpdateColumn("status", gorm.Expr("status"))
+	if locked.Error != nil {
+		return locked.Error
+	}
+	c := Campaign{}
+	if err := tx.Where("id = ? AND user_id = ?", id, uid).First(&c).Error; err != nil {
 		return err
 	}
-	// Delete any maillogs still set to be sent out, preventing future emails
-	err = db.Where("campaign_id=?", id).Delete(&MailLog{}).Error
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	// Don't overwrite original completed time
 	if c.Status == CampaignComplete {
-		return nil
+		return tx.Commit().Error
 	}
-	// Mark the campaign as complete
+	var processing int
+	if err := tx.Model(&MailLog{}).Where("campaign_id = ? AND processing = ?", id, true).Count(&processing).Error; err != nil {
+		return err
+	}
+	if processing > 0 {
+		return ErrCampaignProcessing
+	}
+	if err := tx.Where("campaign_id = ?", id).Delete(&MailLog{}).Error; err != nil {
+		return err
+	}
 	c.CompletedDate = time.Now().UTC()
 	c.Status = CampaignComplete
-	err = db.Model(&Campaign{}).Where("id=? and user_id=?", id, uid).
-		Select([]string{"completed_date", "status"}).UpdateColumns(&c).Error
-	if err != nil {
-		log.Error(err)
+	if err := tx.Model(&Campaign{}).Where("id = ? AND user_id = ?", id, uid).
+		Select([]string{"completed_date", "status"}).UpdateColumns(&c).Error; err != nil {
+		return err
 	}
-	return err
+	return tx.Commit().Error
 }
