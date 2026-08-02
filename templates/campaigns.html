@@ -1,5 +1,5 @@
 {{define "body"}}
-<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main" style="overflow-x:hidden;">
     <div class="row">
         <h1 class="page-header">
             Campaigns
@@ -10,6 +10,8 @@
         <button type="button" class="btn btn-primary" data-toggle="modal" data-backdrop="static" data-target="#modal"
             onclick="edit('new')">
             <i class="fa fa-plus"></i> New Campaign</button>
+        <button type="button" id="bulkComplete" class="btn btn-default" disabled>
+            <i class="fa fa-check"></i> Complete Selected</button>
     </div>
     &nbsp;
 
@@ -36,6 +38,7 @@
                 <table id="campaignTable" class="table" style="display:none;">
                     <thead>
                         <tr>
+                            <th class="no-sort"><input type="checkbox" id="selectAllCampaigns" aria-label="Select visible campaigns"></th>
                             <th class="col-md-3">Name</th>
                             <th class="col-md-4">Created Date</th>
                             <th class="col-md-2">Status</th>
@@ -175,5 +178,6 @@
     </div>
 </div>
 {{end}} {{define "scripts"}}
+<script src="/js/dist/app/campaign_bulk.min.js"></script>
 <script src="/js/dist/app/campaigns.min.js"></script>
 {{end}}

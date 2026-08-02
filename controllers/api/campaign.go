@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 )
+
+type campaignsCompleteRequest struct {
+	CampaignIDs []int64 `json:"campaign_ids"`
+}
+
+type campaignActionResult struct {
+	ID      int64  `json:"id"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
 
 // Campaigns returns a list of campaigns if requested via GET.
 // If requested via POST, APICampaigns creates a new campaign and returns a reference to it.
@@ -129,9 +140,61 @@ func (as *Server) CampaignComplete(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "GET":
 		err := models.CompleteCampaign(id, ctx.Get(r, "user_id").(int64))
 		if err != nil {
+			if errors.Is(err, models.ErrCampaignProcessing) {
+				JSONResponse(w, models.Response{Success: false, Message: err.Error()}, http.StatusConflict)
+				return
+			}
 			JSONResponse(w, models.Response{Success: false, Message: "Error completing campaign"}, http.StatusInternalServerError)
 			return
 		}
 		JSONResponse(w, models.Response{Success: true, Message: "Campaign completed successfully!"}, http.StatusOK)
 	}
+}
+
+func (as *Server) CampaignsComplete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	request := campaignsCompleteRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || len(request.CampaignIDs) == 0 {
+		JSONResponse(w, models.Response{Success: false, Message: "Invalid campaign IDs"}, http.StatusBadRequest)
+		return
+	}
+	seen := make(map[int64]struct{}, len(request.CampaignIDs))
+	for _, id := range request.CampaignIDs {
+		if id <= 0 {
+			JSONResponse(w, models.Response{Success: false, Message: "Invalid campaign IDs"}, http.StatusBadRequest)
+			return
+		}
+		if _, exists := seen[id]; exists {
+			JSONResponse(w, models.Response{Success: false, Message: "Duplicate campaign IDs"}, http.StatusBadRequest)
+			return
+		}
+		seen[id] = struct{}{}
+	}
+	userID := ctx.Get(r, "user_id").(int64)
+	results := make([]campaignActionResult, 0, len(request.CampaignIDs))
+	allSucceeded := true
+	for _, id := range request.CampaignIDs {
+		result := campaignActionResult{ID: id, Status: "completed"}
+		err := models.CompleteCampaign(id, userID)
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			result.Status = "not_found"
+			result.Message = "Campaign not found"
+			allSucceeded = false
+		case errors.Is(err, models.ErrCampaignProcessing):
+			result.Status = "processing"
+			result.Message = err.Error()
+			allSucceeded = false
+		case err != nil:
+			result.Status = "error"
+			result.Message = "Error completing campaign"
+			allSucceeded = false
+		}
+		results = append(results, result)
+	}
+	JSONResponse(w, models.Response{Success: allSucceeded, Data: map[string]interface{}{"results": results}}, http.StatusOK)
 }

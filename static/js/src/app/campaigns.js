@@ -352,7 +352,7 @@ $(document).ready(function () {
                         targets: "no-sort"
                     }],
                     order: [
-                        [1, "desc"]
+                        [2, "desc"]
                     ]
                 });
                 archivedCampaignsTable = $("#campaignTableArchive").DataTable({
@@ -398,6 +398,7 @@ $(document).ready(function () {
                     if (campaign.status == 'Completed') {
                         rows['archived'].push(row)
                     } else {
+                        row.unshift(campaignBulk.checkbox(campaign))
                         rows['active'].push(row)
                     }
                 })
@@ -427,4 +428,5 @@ $(document).ready(function () {
             return 0;
         });
     })
+    campaignBulk.bind()
 })
