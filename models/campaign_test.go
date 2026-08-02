@@ -92,15 +92,12 @@ func (s *ModelsSuite) TestCampaignDateValidation(c *check.C) {
 }
 
 func (s *ModelsSuite) TestLaunchCampaignMaillogStatus(c *check.C) {
-	// For the first test, ensure that campaigns created with the zero date
-	// (and therefore are set to launch immediately) have maillogs that are
-	// locked to prevent race conditions.
 	campaign := s.createCampaign(c)
 	ms, err := GetMailLogsByCampaign(campaign.Id)
 	c.Assert(err, check.Equals, nil)
 
 	for _, m := range ms {
-		c.Assert(m.Processing, check.Equals, true)
+		c.Assert(m.Processing, check.Equals, false)
 	}
 
 	// Next, verify that campaigns scheduled in the future do not lock the
@@ -143,6 +140,19 @@ func (s *ModelsSuite) TestCompleteCampaignAlsoDeletesMailLogs(c *check.C) {
 	ms, err = GetMailLogsByCampaign(campaign.Id)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(len(ms), check.Equals, 0)
+}
+
+func (s *ModelsSuite) TestCompleteCampaign_rejects_processing_mail(c *check.C) {
+	campaign := s.createCampaign(c)
+	mailLogs, err := GetMailLogsByCampaign(campaign.Id)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(mailLogs[0].Lock(), check.Equals, nil)
+
+	err = CompleteCampaign(campaign.Id, campaign.UserId)
+	c.Assert(err, check.Equals, ErrCampaignProcessing)
+	current, err := GetCampaign(campaign.Id, campaign.UserId)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(current.Status, check.Not(check.Equals), CampaignComplete)
 }
 
 func (s *ModelsSuite) TestCampaignGetResults(c *check.C) {

@@ -103,6 +103,33 @@ func (s *ModelsSuite) TestMailLogBackoff(ch *check.C) {
 	// Check that we receive our error after meeting the maximum send attempts
 	err = m.Backoff(expectedError)
 	ch.Assert(err, check.Equals, ErrMaxSendAttempts)
+	ms, err := GetMailLogsByCampaign(campaign.Id)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(len(ms), check.Equals, len(campaign.Results)-1)
+}
+
+func (s *ModelsSuite) TestClaimQueuedMailLogs_claims_once(ch *check.C) {
+	campaign := s.createCampaign(ch)
+	claimed, err := ClaimQueuedMailLogs(time.Now().UTC().Add(time.Minute))
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(len(claimed), check.Equals, len(campaign.Results))
+	claimedAgain, err := ClaimQueuedMailLogs(time.Now().UTC().Add(time.Minute))
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(len(claimedAgain), check.Equals, 0)
+}
+
+func (s *ModelsSuite) TestClaimQueuedMailLogs_skips_terminal_results(ch *check.C) {
+	campaign := s.createCampaign(ch)
+	mailLogs, err := GetMailLogsByCampaign(campaign.Id)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(LockMailLogs(mailLogs[1:], true), check.Equals, nil)
+	ch.Assert(mailLogs[0].Error(fmt.Errorf("permanent failure")), check.Equals, nil)
+	stale := MailLog{CampaignId: campaign.Id, UserId: campaign.UserId, RId: campaign.Results[0].RId, SendDate: time.Now().UTC()}
+	ch.Assert(db.Create(&stale).Error, check.Equals, nil)
+
+	claimed, err := ClaimQueuedMailLogs(time.Now().UTC().Add(time.Minute))
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(len(claimed), check.Equals, 0)
 }
 
 func (s *ModelsSuite) TestMailLogError(ch *check.C) {
@@ -305,6 +332,9 @@ func (s *ModelsSuite) TestMailLogGenerateOverrideTransparencyHeaders(ch *check.C
 func (s *ModelsSuite) TestUnlockAllMailLogs(ch *check.C) {
 	campaign := s.createCampaign(ch)
 	ms, err := GetMailLogsByCampaign(campaign.Id)
+	ch.Assert(err, check.Equals, nil)
+	ch.Assert(LockMailLogs(ms, true), check.Equals, nil)
+	ms, err = GetMailLogsByCampaign(campaign.Id)
 	ch.Assert(err, check.Equals, nil)
 	for _, m := range ms {
 		ch.Assert(m.Processing, check.Equals, true)
