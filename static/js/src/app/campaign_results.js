@@ -243,6 +243,7 @@ function replay(event_idx) {
     form = $('<form>').attr({
         method: 'POST',
         target: '_blank',
+        rel: 'noopener',
     })
     /* Create a form object and submit it */
     $.each(Object.keys(details.payload), function (i, param) {
@@ -422,7 +423,7 @@ function renderTimeline(data) {
                 if (details.error) {
                     results += '<div class="timeline-event-details"><i class="fa fa-caret-right"></i> View Details</div>'
                     results += '<div class="timeline-event-results">'
-                    results += '<span class="label label-default">Error</span> ' + details.error
+                    results += '<span class="label label-default">Error</span> ' + escapeHtml(details.error)
                     results += '</div>'
                 }
             }
