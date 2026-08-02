@@ -60,8 +60,7 @@ function launch() {
                         campaign = data
                     })
                     .error(function (data) {
-                        $("#modal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-danger\">\
-            <i class=\"fa fa-exclamation-circle\"></i> " + data.responseJSON.message + "</div>")
+                        modalError(data.responseJSON.message)
                         Swal.close()
                     })
             })
@@ -98,19 +97,21 @@ function sendTestEmail() {
             name: $("#profile").select2("data")[0].text
         }
     }
-    btnHtml = $("#sendTestModalSubmit").html()
-    $("#sendTestModalSubmit").html('<i class="fa fa-spinner fa-spin"></i> Sending')
+    var button = $("#sendTestModalSubmit")
+    var btnHtml = button.html()
+    button.prop("disabled", true).html('<i class="fa fa-spinner fa-spin"></i> Sending')
     // Send the test email
     api.send_test_email(test_email_request)
         .success(function (data) {
             $("#sendTestEmailModal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-success\">\
             <i class=\"fa fa-check-circle\"></i> Email Sent!</div>")
-            $("#sendTestModalSubmit").html(btnHtml)
         })
         .error(function (data) {
             $("#sendTestEmailModal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-danger\">\
             <i class=\"fa fa-exclamation-circle\"></i> " + data.responseJSON.message + "</div>")
-            $("#sendTestModalSubmit").html(btnHtml)
+        })
+        .always(function () {
+            button.prop("disabled", false).html(btnHtml)
         })
 }
 
@@ -162,7 +163,8 @@ function deleteCampaign(idx) {
 }
 
 function setupOptions() {
-    api.groups.summary()
+    var groupsRequest = api.groups.summary()
+    groupsRequest
         .success(function (summaries) {
             groups = summaries.groups
             if (groups.length == 0) {
@@ -181,7 +183,8 @@ function setupOptions() {
                 });
             }
         });
-    api.templates.get()
+    var templatesRequest = api.templates.get()
+    templatesRequest
         .success(function (templates) {
             if (templates.length == 0) {
                 modalError("No templates found!")
@@ -202,7 +205,8 @@ function setupOptions() {
                 }
             }
         });
-    api.pages.get()
+    var pagesRequest = api.pages.get()
+    pagesRequest
         .success(function (pages) {
             if (pages.length == 0) {
                 modalError("No pages found!")
@@ -223,7 +227,8 @@ function setupOptions() {
                 }
             }
         });
-    api.SMTP.get()
+    var profilesRequest = api.SMTP.get()
+    profilesRequest
         .success(function (profiles) {
             if (profiles.length == 0) {
                 modalError("No profiles found!")
@@ -244,6 +249,7 @@ function setupOptions() {
                 }
             }
         });
+    return $.when(groupsRequest, templatesRequest, pagesRequest, profilesRequest)
 }
 
 function edit(campaign) {
@@ -251,9 +257,8 @@ function edit(campaign) {
 }
 
 function copy(idx) {
-    setupOptions();
-    // Set our initial values
-    api.campaignId.get(campaigns[idx].id)
+    setupOptions().done(function () {
+        api.campaignId.get(campaigns[idx].id)
         .success(function (campaign) {
             $("#name").val("Copy of " + campaign.name)
             if (!campaign.template.id) {
@@ -286,9 +291,11 @@ function copy(idx) {
             $("#url").val(campaign.url)
         })
         .error(function (data) {
-            $("#modal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-danger\">\
-            <i class=\"fa fa-exclamation-circle\"></i> " + data.responseJSON.message + "</div>")
+            modalError(data.responseJSON.message)
         })
+    }).fail(function () {
+        modalError("Error loading campaign options")
+    })
 }
 
 $(document).ready(function () {
