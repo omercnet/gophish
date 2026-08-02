@@ -48,14 +48,9 @@ func WithMailer(m mailer.Mailer) func(*DefaultWorker) error {
 // processCampaigns loads maillogs scheduled to be sent before the provided
 // time and sends them to the mailer.
 func (w *DefaultWorker) processCampaigns(t time.Time) error {
-	ms, err := models.GetQueuedMailLogs(t.UTC())
+	ms, err := models.ClaimQueuedMailLogs(t.UTC())
 	if err != nil {
 		log.Error(err)
-		return err
-	}
-	// Lock the MailLogs (they will be unlocked after processing)
-	err = models.LockMailLogs(ms, true)
-	if err != nil {
 		return err
 	}
 	campaignCache := make(map[int64]models.Campaign)
@@ -115,28 +110,21 @@ func (w *DefaultWorker) Start() {
 
 // LaunchCampaign starts a campaign
 func (w *DefaultWorker) LaunchCampaign(c models.Campaign) {
-	ms, err := models.GetMailLogsByCampaign(c.Id)
+	currentTime := time.Now().UTC()
+	ms, err := models.ClaimCampaignMailLogs(c.Id, currentTime)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	models.LockMailLogs(ms, true)
 	// This is required since you cannot pass a slice of values
 	// that implements an interface as a slice of that interface.
 	mailEntries := []mailer.Mail{}
-	currentTime := time.Now().UTC()
 	campaignMailCtx, err := models.GetCampaignMailContext(c.Id, c.UserId)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	for _, m := range ms {
-		// Only send the emails scheduled to be sent for the past minute to
-		// respect the campaign scheduling options
-		if m.SendDate.After(currentTime) {
-			m.Unlock()
-			continue
-		}
 		err = m.CacheCampaign(&campaignMailCtx)
 		if err != nil {
 			log.Error(err)
@@ -144,7 +132,9 @@ func (w *DefaultWorker) LaunchCampaign(c models.Campaign) {
 		}
 		mailEntries = append(mailEntries, m)
 	}
-	w.mailer.Queue(mailEntries)
+	if len(mailEntries) > 0 {
+		w.mailer.Queue(mailEntries)
+	}
 }
 
 // SendTestEmail sends a test email
