@@ -76,6 +76,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = log.Setup(conf.Logging)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if conf.ContactAddress == "" {
 		log.Warnf("No contact address has been configured.")
 		log.Warnf("Please configure contact_address or CONTACT_ADDRESS")
@@ -90,11 +94,6 @@ func main() {
 	webhook.SetTransport(&http.Transport{
 		DialContext: dialer.Dialer().DialContext,
 	})
-
-	err = log.Setup(conf.Logging)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Provide the option to disable the built-in mailer
 	// Setup the global variables and settings
