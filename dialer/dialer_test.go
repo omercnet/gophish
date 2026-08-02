@@ -83,3 +83,18 @@ func TestSingleIP(t *testing.T) {
 	}
 	DefaultDialer.SetAllowedHosts(orig)
 }
+
+func TestSetAllowedHosts_rejects_invalid_range_without_changing_dialer(t *testing.T) {
+	dialer := &RestrictedDialer{}
+	if err := dialer.SetAllowedHosts([]string{"10.0.0.0/8"}); err != nil {
+		t.Fatalf("set initial hosts: %v", err)
+	}
+
+	err := dialer.SetAllowedHosts([]string{"127.0.0.1", "not-a-range"})
+	if err == nil {
+		t.Fatal("expected invalid range error")
+	}
+	if got := dialer.AllowedHosts(); len(got) != 1 || got[0] != "10.0.0.0/8" {
+		t.Fatalf("invalid update changed allowed hosts: %v", got)
+	}
+}

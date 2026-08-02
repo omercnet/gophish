@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	configPath    = kingpin.Flag("config", "Location of config.json.").Default("./config.json").String()
+	configPath    = kingpin.Flag("config", "Location of config.json; use an empty value for environment-only configuration.").Default("./config.json").String()
 	disableMailer = kingpin.Flag("disable-mailer", "Disable the mailer (for use with multi-system deployments)").Bool()
 	mode          = kingpin.Flag("mode", fmt.Sprintf("Run the binary in one of the modes (%s, %s or %s)", modeAll, modeAdmin, modePhish)).
 			Default("all").Enum(modeAll, modeAdmin, modePhish)
@@ -78,13 +78,15 @@ func main() {
 	}
 	if conf.ContactAddress == "" {
 		log.Warnf("No contact address has been configured.")
-		log.Warnf("Please consider adding a contact_address entry in your config.json")
+		log.Warnf("Please configure contact_address or CONTACT_ADDRESS")
 	}
 	config.Version = string(version)
 
 	// Configure our various upstream clients to make sure that we restrict
 	// outbound connections as needed.
-	dialer.SetAllowedHosts(conf.AdminConf.AllowedInternalHosts)
+	if err := dialer.SetAllowedHosts(conf.AdminConf.AllowedInternalHosts); err != nil {
+		log.Fatal(err)
+	}
 	webhook.SetTransport(&http.Transport{
 		DialContext: dialer.Dialer().DialContext,
 	})
