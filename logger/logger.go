@@ -19,16 +19,22 @@ var ErrInvalidLevel = errors.New("invalid log level")
 type Config struct {
 	Filename string `json:"filename"`
 	Level    string `json:"level"`
+	Pretty   bool   `json:"pretty"`
 }
 
 func init() {
 	Logger = logrus.New()
-	Logger.Formatter = &logrus.TextFormatter{DisableColors: true}
+	Logger.Formatter = &logrus.JSONFormatter{}
 }
 
 // Setup configures the logger based on options in the config.json.
 func Setup(config *Config) error {
 	var err error
+	if config.Pretty {
+		Logger.SetFormatter(&logrus.TextFormatter{DisableColors: true})
+	} else {
+		Logger.SetFormatter(&logrus.JSONFormatter{})
+	}
 	// Set up logging level
 	level := logrus.InfoLevel
 	if config.Level != "" {
