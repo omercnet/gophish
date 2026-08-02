@@ -99,10 +99,9 @@ func chooseDBDriver(name, openStr string) goose.DBDriver {
 }
 
 func createTemporaryPassword(u *User) error {
-	var temporaryPassword string
-	if envPassword := os.Getenv(InitialAdminPassword); envPassword != "" {
-		temporaryPassword = envPassword
-	} else {
+	temporaryPassword := os.Getenv(InitialAdminPassword)
+	generated := temporaryPassword == ""
+	if generated {
 		// This will result in a 16 character password which could be viewed as an
 		// inconvenience, but it should be ok for now.
 		temporaryPassword = auth.GenerateSecureKey(auth.MinPasswordLength)
@@ -119,7 +118,9 @@ func createTemporaryPassword(u *User) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Please login with the username admin and the password %s", temporaryPassword)
+	if generated {
+		log.Infof("Please login with the username admin and the password %s", temporaryPassword)
+	}
 	return nil
 }
 
@@ -176,7 +177,7 @@ func Setup(c *config.Config) error {
 		if err == nil {
 			break
 		}
-		if err != nil && i >= MaxDatabaseConnectionAttempts {
+		if i >= MaxDatabaseConnectionAttempts {
 			log.Error(err)
 			return err
 		}
@@ -187,10 +188,6 @@ func Setup(c *config.Config) error {
 	db.LogMode(false)
 	db.SetLogger(log.Logger)
 	db.DB().SetMaxOpenConns(1)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 	// Migrate up to the latest version
 	err = goose.RunMigrationsOnDb(migrateConf, migrateConf.MigrationsDir, latest, db.DB())
 	if err != nil {
