@@ -25,19 +25,21 @@ function sendTestEmail() {
             headers: headers,
         }
     }
-    btnHtml = $("#sendTestModalSubmit").html()
-    $("#sendTestModalSubmit").html('<i class="fa fa-spinner fa-spin"></i> Sending')
+    var button = $("#sendTestModalSubmit")
+    var btnHtml = button.html()
+    button.prop("disabled", true).html('<i class="fa fa-spinner fa-spin"></i> Sending')
     // Send the test email
     api.send_test_email(test_email_request)
         .success(function (data) {
             $("#sendTestEmailModal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-success\">\
 	    <i class=\"fa fa-check-circle\"></i> Email Sent!</div>")
-            $("#sendTestModalSubmit").html(btnHtml)
         })
         .error(function (data) {
             $("#sendTestEmailModal\\.flashes").empty().append("<div style=\"text-align:center\" class=\"alert alert-danger\">\
 	    <i class=\"fa fa-exclamation-circle\"></i> " + escapeHtml(data.responseJSON.message) + "</div>")
-            $("#sendTestModalSubmit").html(btnHtml)
+        })
+        .always(function () {
+            button.prop("disabled", false).html(btnHtml)
         })
 }
 
@@ -169,6 +171,13 @@ function edit(idx) {
 }
 
 function copy(idx) {
+    headers = $("#headersTable").dataTable({
+        destroy: true,
+        columnDefs: [{
+            orderable: false,
+            targets: "no-sort"
+        }]
+    })
     $("#modalSubmit").unbind('click').click(function () {
         save(-1)
     })
@@ -181,6 +190,9 @@ function copy(idx) {
     $("#username").val(profile.username)
     $("#password").val(profile.password)
     $("#ignore_cert_errors").prop("checked", profile.ignore_cert_errors)
+    $.each(profile.headers, function (i, record) {
+        addCustomHeader(record.key, record.value)
+    })
 }
 
 function load() {
