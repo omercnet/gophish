@@ -5,6 +5,7 @@ import (
 	"net/mail"
 	"net/url"
 	"path"
+	"strings"
 	"text/template"
 )
 
@@ -76,7 +77,7 @@ func NewPhishingTemplateContext(ctx TemplateContext, r BaseRecipient, rid string
 // template body and data.
 func ExecuteTemplate(text string, data interface{}) (string, error) {
 	buff := bytes.Buffer{}
-	tmpl, err := template.New("template").Parse(text)
+	tmpl, err := template.New("template").Parse(strings.ReplaceAll(text, `${{`, `${{"{{"}}`))
 	if err != nil {
 		return buff.String(), err
 	}

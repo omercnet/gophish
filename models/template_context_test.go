@@ -45,3 +45,18 @@ func (s *ModelsSuite) TestNewTemplateContext(c *check.C) {
 	c.Assert(err, check.Equals, nil)
 	c.Assert(got, check.DeepEquals, expected)
 }
+
+func (s *ModelsSuite) TestExecuteTemplatePreservesGitHubActionsExpressions(c *check.C) {
+	text := "${{ inputs.PULUMI_STACK_PREFIX }} {{.FirstName}}"
+
+	got, err := ExecuteTemplate(text, BaseRecipient{FirstName: "Foo"})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(got, check.Equals, "${{ inputs.PULUMI_STACK_PREFIX }} Foo")
+}
+
+func (s *ModelsSuite) TestValidateTemplateAcceptsGitHubActionsExpressions(c *check.C) {
+	err := ValidateTemplate("${{ inputs.PULUMI_STACK_PREFIX }} {{.FirstName}}")
+
+	c.Assert(err, check.IsNil)
+}
